@@ -1,0 +1,13 @@
+[Unit]
+Description=Cuckoo 
+After=mongodb.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/cuckoo web runserver 0.0.0.0:80 
+KillMode=process
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

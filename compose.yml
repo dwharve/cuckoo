@@ -1,0 +1,40 @@
+version: '2'
+services:
+  cuckoo:
+    privileged: true
+    image: dwharve/cuckoo:2.0.6
+    volumes:
+      - /opt/cuckoo/conf:/root/.cuckoo/conf
+      - /root/.ssh/id_rsa:/root/.ssh/id_rsa
+    network_mode: "host"
+  mongodb:
+    privileged: true
+    image: mongo:3.4
+    volumes:
+      - /opt/cuckoo/mongodb:/data/db
+    network_mode: "host"
+  postgres:
+    privileged: true
+    image: postgres:10.5
+    environment:
+      POSTGRES_DB: cuckoo
+      POSTGRES_USER: cuckoo
+      POSTGRES_PASSWORD: cuckoopass
+    volumes:
+      - /opt/cuckoo/postgres:/var/lib/postgresql/data
+    network_mode: "host"
+  elastic:
+    privileged: true
+    image: docker.elastic.co/elasticsearch/elasticsearch:5.6.12
+    environment:
+      CLUSTER_NAME: "cuckoo"
+      NODE_MASTER: "true"
+      NODE_INGEST: "false"
+      NODE_DATA: "false"
+      HTTP_ENABLE: "false"
+      ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+    volumes:
+      - /opt/cuckoo/elasticsearch:/usr/share/elasticsearch/data
+      - /opt/cuckoo/conf/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+    network_mode: "host"
+

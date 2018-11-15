@@ -1,0 +1,9 @@
+#!/bin/sh
+
+grep "$(cat /root/.ssh/id_rsa.pub)" /root/.ssh/authorized_keys || cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
+
+if [ "$(ls /root/.cuckoo/storage | wc -l)" == "0" ]; then
+  cuckoo --cwd /root/.cuckoo init
+fi
+
+exit 0;

@@ -1,0 +1,125 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cuckoo
+  labels:
+    component: cuckoo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: cuckoo
+  template:
+    metadata:
+      labels:
+        component: cuckoo
+    spec:
+      hostNetwork: true
+      initContainers:
+      - name: setup
+        image: busybox:1.27.2
+        command:
+        - /bin/sh
+        - -c
+        - sysctl -w vm.max_map_count=262144; chown -R 1000:1000 /usr/share/elasticsearch/data
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: data
+      containers:
+      - name: elasticsearch
+        image: docker.elastic.co/elasticsearch/elasticsearch:5.6.12
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: elastic
+        env:
+        - name: CLUSTER_NAME
+          value: cuckoo
+        - name: NODE_MASTER
+          value: "true"
+        - name: NODE_INGEST
+          value: "false"
+        - name: NODE_DATA
+          value: "false"
+        - name: HTTP_ENABLE
+          value: "false"
+        - name: ES_JAVA_OPTS
+          value: -Xms1g -Xmx1g 
+      - name: mongodb
+        image: mongo:3.4
+        volumeMounts:
+        - mountPath: /data/db
+          name: mongo
+      - name: cuckoo-db
+        image: postgres:10.5
+        env:
+        - name: POSTGRES_DB
+          value: cuckoo
+        - name: POSTGRES_USER
+          value: cuckoo
+        - name: POSTGRES_PASSWORD
+          value: cuckoopass
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: db
+      - name: cuckoo
+        image: dwharve/cuckoo:2.0.6
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /root/.cuckoo/conf
+          name: configs
+        - mountPath: /root/.cuckoo/storage
+          name: data
+        - mountPath: /root/.ssh
+          name: keys
+        ports:
+        - containerPort: 4822
+          name: guac
+        - containerPort: 80
+          name: http
+      volumes:
+      - name: elastic
+        hostPath:
+          path: /data/cuckoo/elasticsearch
+          type: Directory
+      - name: configs
+        configMap:
+          name: cuckoo
+      - name: keys
+        hostPath:
+          path: /root/.ssh
+          type: Directory
+      - name: db
+        hostPath:
+          path: /data/cuckoo/postgresql
+          type: Directory
+      - hostPath:
+          path: /data/cuckoo/storage
+          type: Directory
+        name: data
+      - hostPath:
+          path: /data/cuckoo/mongo
+          type: Directory
+        name: mongo
+      nodeSelector:
+        cuckoo: "true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cuckoo
+  labels:
+    component: cuckoo
+spec:
+  selector:
+    component: cuckoo
+  ports:
+  - name: guac
+    port: 4822
+    targetPort: 4822
+  - name: http
+    port: 80
+    targetPort: 80
+  type: LoadBalancer
+

@@ -1,0 +1,13 @@
+[Unit]
+Description=Cuckoo 
+After=cuckoo-rooter.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/cuckoo process 2 
+KillMode=process
+Restart=always
+RestartSec=3
+[Install]
+WantedBy=multi-user.target
+
